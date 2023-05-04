@@ -1,192 +1,120 @@
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Set;
-import java.util.HashSet;
+package swen221.tetris.tetromino;
+
+import java.util.Optional;
+
+import swen221.tetris.logic.Board;
+import swen221.tetris.logic.Color;
 
 /**
- * Structure for holding stop information
- */
+ * every round the alive Tetormino perform exactly one of the following 5 options:
+ * 1  rotate left
+ * 2  rotate right
+ * 3  move left
+ * 4  move right
+ * 5  move down
+ * if after the option the piece has touch() then its content is copied
+ * on the board, erasure of full lines happens, and a random new tetromino is created.
+ * This encodes a variation of the so called "easy spin mode". By continuously rotating,
+ * or moving left/right a piece, it never goes down.
+ * */
+public abstract class Tetromino {
 
-public class Stop implements Comparable<Stop> {
-    // location of the stop
-    private GisPoint loc;
-    private String name;
-    private String id;
+  /**column coordinate of the center of the Tetromino*/
+  private int x;
 
-    // data structure for holding a link to the lines that stop is part of
-    private Collection<Line> lines = new HashSet<Line>();
+  /**row coordinate of the center of the Tetromino*/
+  private int y;
 
-    // data structure for holding the (directed) edges connecting to the stop
-    private Collection<Edge> forwardEdges = new HashSet<Edge>();
-    private Collection<Edge> backwardEdges = new HashSet<Edge>();
+  /** color of the Tetromino cells*/
+  Color color;
 
-    // data structure for holding the set of (undirected) neighbours (stops) connected to this stop
-    private Set<Stop> neighbours = new HashSet<Stop>();
+  Tetromino(int x, int y, Color color){
+    this.x= x;
+    this.y= y;
+    this.color= color;
+  }
+   /** A valid Tetromino has all its cells inside of the board limits*/
+  public boolean valid() {
+    return Board.rangeT().allMatch(i->
+      Board.xOk(x(i)) && Board.yOk(y(i)));
+  }
 
-    //Field to record the different subgraphs
-    private int subGraphId = -1; // used to denote which subgraph the stop belongs to. -1 to indicate no subgraphs yet.
+  /** column coordinate of the center of the Tetromino*/
+  public int centerX() { return x; }
 
+  /** row coordinate of the center of the Tetromino*/
+  public int centerY() { return y; }
 
-    /**
-     * Constructor for a stop
-     * 
-     * @param id   4 or 5 digit stop id
-     * @param name Long name for the stop
-     * @param lat
-     * @param lon
-     */
-    public Stop(double lon, double lat, String name, String id) {
-        this.loc = new GisPoint(lon, lat);
-        this.name = name;
-        this.id = id;
-    }
+  /** color of the Tetromino cells*/
+  public Color color() { return color; }
 
-    //--------------------------------------------
-    //  Getters and basic properties of a Stop
-    //--------------------------------------------
+  /** moves the tetromino one step down*/
+  public void moveDown() { y -= 1; }
 
-    /**
-     * Get the location of the stop
-     * @return GisPoint object of location on earth
-     */
-    public GisPoint getPoint() {
-        return this.loc;
-    }
+  /** moves the tetromino one step up*/
+  public void moveUp() { y += 1; }
 
-    public String getName() {
-        return name;
-    }
+  /** moves the tetromino one step left*/
+  public void moveLeft() { x -= 1; }
 
-    public String getId() {
-        return id;
-    }
+  /** moves the tetromino one step right*/
+  public void moveRight() { x += 1; }
 
-    /**
-     * Returns distance in meters between this stop and a GisPoint
-     */
-    public double distanceTo(GisPoint loc) {
-        return this.loc.distance(loc);
-    }
-    
-    /**
-     * Returns distance in meters between this stop and another stop
-     */
-    public double distanceTo(Stop toStop) {
-        return this.loc.distance(toStop.loc);
-    }
+  /** true if the tetromino is in contact with anything
+   *  on its bottom, false otherwise
+   *  */
+  public boolean touch(Board b) {
+    moveDown();
+    boolean over= overlap(b);
+    moveUp();
+    return over;
+  }
 
-    /**
-     * Compare by alphabetic order of name,
-     * If two stops have the same name, then
-     * compare their id's in case they are not the same stop.
-     */
-    public int compareTo(Stop other){
-        int ans = this.name.compareTo(other.name);
-        if (ans!=0) {return ans;}
-        return this.id.compareTo(other.id);
-    }
+  /**
+   * Every Tetromino covers 4 points, they can be retrieved
+   * by x(0),y(0), x(1),y(1) and so on.
+   * */
+  public abstract int x(int i);
 
+  /**
+   * Every Tetromino covers 4 points, they can be retrieved
+   * by x(0),y(0), x(1),y(1) and so on.
+   * */
+  public abstract int y(int i);
 
-    /** 
-     * Display a stop
-     * 
-     * @return string of the stop information in the format: XXXX: long name at (lon,lat)
-     */
-    public String toString() {
-        return id + ": " + name + " at (" + loc.getLon() + ", " + loc.getLat() + ")";
-    }
+  /**Modify the state of the Tetromino so that it is now rotated 90' clockwise */
+  public abstract void rotateRight();
 
-    /**
-     * @param a GisPoint to check if the stop is in an **identical** location
-     * @return is this stop in the same location as the given point
-     */
-    public boolean atLocation(GisPoint point) {
-        return this.loc.equals(point);
-    }
+  /**Modify the state of the Tetromino so that it is now rotated 90' counter-clockwise */
+  public final void rotateLeft() {
+	  rotateRight();
+	  rotateRight();
+	  rotateRight();
+    //moveDown();//TODO: fix this code
+  }
 
+  /**true if the tetromino is compenetrating any element
+   * on the board, false otherwise.
+   * The result is false also if part of the Tetromino
+   * sits outside of the board
+   * */
+  public boolean overlap(Board b) {
+	  //return board.rangeX().allMatch(x -> this.read(x, y).filter(cell -> !cell.equals(Color.EMPTY)).isPresent());
+	  //return board.rangeT().anyMatch(i -> board.write(x(i), y(i), color()));
+	    //return board.rangeT()
+	       // .anyMatch(i -> board.read(x(i), y(i)));
+	  return Board.rangeT().anyMatch(i -> {
+		  Optional<Color> piece = b.read(x(i), y(i));
+		  return piece.isEmpty() || !piece.get().equals(Color.EMPTY);
+	  });
+	}
 
-    //-------------------------
-    // Setting and getting the lines through this stop
-    //-------------------------
+  /**
+   * modifies the content of the board by adding the cells of this Tetromino
+   */
+  public void copyOnBoard(Board b) {//TODO: fix this code
+    Board.rangeT()
+      .forEach(i-> b.write(x(i), y(i), color()));   
 
-    /**
-     * adding a line that goes through this stop
-     * @param line
-     */
-    public void addLine(Line line) {
-        this.lines.add(line);
-    }
-
-    // get lines
-    public Collection<Line> getLines() {
-        return Collections.unmodifiableCollection(this.lines);
-    }
-
-    //--------------------------------------------
-    //  Setting and getting the neighbours of the stop
-    //
-    //  forwardEdges is a collection of the (directed) edges out of the stop, and
-    //  backwardEdges is a collection of the (directed) edges into the stop.
-    //  neighbours is a collection of the stops that are connected (forward or back) this stop.
-    //     (ie, the undirected graph)
-    //--------------------------------------------
-
-    /** Get the collection of forwardEdges*/
-    public Collection<Edge> getForwardEdges() {
-        return Collections.unmodifiableCollection(forwardEdges);
-    }
-         
-    /** Get the collection of backwardEdges*/
-    public Collection<Edge> getBackwardEdges(){
-        return Collections.unmodifiableCollection(backwardEdges);
-    }
-
-    /** Get the collection of neighbouring Stops*/
-    public Collection<Stop> getNeighbours() {
-        return Collections.unmodifiableSet(neighbours);
-    }
-         
-    /** add a new forward edge  */
-    public void addForwardEdge(Edge edge) {
-        this.forwardEdges.add(edge);
-    }
-
-    /** add a new backward edge  */
-    public void addBackwardEdge(Edge e) {
-        this.backwardEdges.add(e);
-    }
-    /**
-     * Delete forward and backward edges of the specified type.
-     */
-    public void deleteEdgesOfType(String type) {
-        // remove edges that are of the specified type
-        forwardEdges.removeIf((Edge e)->type.equals(e.transpType()));
-        backwardEdges.removeIf((Edge e)->type.equals(e.transpType()));
-    }
-
-    /**
-     * Compute the neighbouring Stops - all the Stops at the other end of
-     * both the forward and backward edges.
-     */
-    public void addNeighbour(Stop stop){
-        neighbours.add(stop);
-    }
-
-    //--------------------------------------------
-    // fields and methods for finding connected components / subgraphs.
-    //--------------------------------------------
-    
-    /** 
-     * @param subGraphId the id of the graph so stops in the game subgraph can be drawn in the same colour or highlighted
-     */
-    public void setSubGraphId(int id) {
-        this.subGraphId = id;
-    }
-
-    public int getSubGraphId() {
-        return subGraphId;
-    }
-
-
-
+  }
 }
